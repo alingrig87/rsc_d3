@@ -153,14 +153,18 @@ export const bulletSpec: VisualizationSpec = {
       mark: { type: 'bar', cornerRadiusTopRight: CORNER_RADIUS, cornerRadiusBottomRight: CORNER_RADIUS, height: 14 },
       encoding: {
         y: { field: 'category', type: 'nominal', sort: null, title: null, axis: { domain: false, ticks: false, grid: false } },
-        x: { field: 'current', type: 'quantitative', title: null },
+        // RSC's <Bullet> draws no quantitative axis at all (no gridlines,
+        // no tick labels) — the bar length is the only value cue. `axis:
+        // null` on both layers sharing this x scale keeps the merged axis
+        // definition consistent (see llmPrompt.ts rule 12).
+        x: { field: 'current', type: 'quantitative', title: null, axis: null },
       },
     },
     {
       mark: { type: 'tick', thickness: 2, size: 26, color: 'black' },
       encoding: {
         y: { field: 'category', type: 'nominal', sort: null },
-        x: { field: 'target', type: 'quantitative' },
+        x: { field: 'target', type: 'quantitative', axis: null },
       },
     },
   ],

@@ -112,20 +112,37 @@ export const DEFAULT_FONT_SIZE = 14;
  * Builds a Vega(-Lite) `config` object that reproduces the visual theme
  * react-spectrum-charts applies on top of Vega — same axis/legend styling,
  * same categorical palette, same font stack, same corner radius / padding.
+ *
+ * `colors` mirrors RSC's `<Chart colors={...}>` prop: pass a custom array to
+ * replace the default categorical16 palette (config.range.category/ordinal
+ * and every mark's default fill/stroke) without touching the rest of the
+ * theme. Omit it to get the stock Spectrum palette.
  */
-export function getSpectrumVegaLiteConfig(colorScheme: 'light' | 'dark' = 'light') {
+export function getSpectrumVegaLiteConfig(colorScheme: 'light' | 'dark' = 'light', colors?: string[]) {
   const g = gray[colorScheme];
   const fontColor = colorScheme === 'light' ? gray.light[800] : gray.dark[800];
-  const defaultColor = categorical[100];
+  const categoryRange = colors && colors.length > 0 ? colors : categorical16;
+  const defaultColor = categoryRange[0];
 
   return {
     background: 'transparent',
     font: ADOBE_CLEAN_FONT,
-    autosize: { type: 'fit', contains: 'padding', resize: true },
+    // RSC's own generated Vega specs (captured via <Chart debug>, see
+    // rsc-vega-chart/reference/theme-and-colors.md's "Sizing model" section)
+    // set NO autosize override at all — Vega's classic default ('pad') is
+    // what they rely on: a fixed width/height canvas whose plot area shrinks
+    // to make room for axis/legend chrome, rather than Vega-Lite's 'fit'
+    // (which grows/reflows the canvas around the content, and compiles
+    // point/band scale ranges as a computed-step signal instead of a plain
+    // [0, width]/[0, height] range). That difference cascades into both
+    // axis tick density (tickCount signals below read the `width`/`height`
+    // signals, which differ in value between the two autosize strategies)
+    // and point-scale outer padding on Line/Area — matching 'pad' fixes both.
+    autosize: { type: 'pad' },
     range: {
-      category: categorical16,
+      category: categoryRange,
       diverging: divergentOrangeYellowSeafoam15,
-      ordinal: categorical16,
+      ordinal: categoryRange,
       ramp: sequentialViridis16,
     },
     // matches getBandPadding(PADDING_RATIO) in packages/vega-spec-builder/src/scale/scaleSpecBuilder.ts
@@ -158,6 +175,17 @@ export function getSpectrumVegaLiteConfig(colorScheme: 'light' | 'dark' = 'light
       titleFontWeight: 'bold',
       titlePadding: 16,
     },
+    // Confirmed byte-for-byte against RSC's own generated spec (via <Chart
+    // debug>): every *quantitative/linear* axis's tick count is a
+    // dimension-driven signal, not Vega-Lite's own denser automatic
+    // heuristic. RSC only puts this on linear axes — a categorical
+    // (band/point-scale) axis shows one label per category regardless of
+    // tickCount, so setting it here too is inert for those, not risky.
+    // Split by channel (not a shared `axis.tickCount`) because the formula
+    // needs `width` for x and `height` for y — e.g. Scatter's x (Speed) is
+    // itself quantitative, unlike Bar's categorical x.
+    axisX: { tickCount: { signal: 'clamp(ceil(width/100), 2, 10)' } },
+    axisY: { tickCount: { signal: 'clamp(ceil(height/100), 2, 10)' } },
     legend: {
       columnPadding: 20,
       labelColor: fontColor,

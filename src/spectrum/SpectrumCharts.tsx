@@ -1,7 +1,8 @@
-import { Axis, Bar, Line, Area, Legend, Chart, Scatter, Title } from '@adobe/react-spectrum-charts';
+import { Axis, Bar, Line, Area, Legend, Chart, Scatter, Title, ChartTooltip, ChartPopover } from '@adobe/react-spectrum-charts';
 import { Donut, BigNumber } from '@adobe/react-spectrum-charts/rc';
 import { Combo, Bullet, Venn } from '@adobe/react-spectrum-charts/alpha';
 import { browserTrend, spend, regionSales, scatterData, comboData, bigNumberTrend, bulletData, vennData } from '../data';
+import { CUSTOM_DONUT_COLORS } from '../interactiveSpecs';
 
 // matches spectrum-charts' indigo-900, used as the fixed line color in their own Combo story
 const COMBO_LINE_COLOR = 'rgb(82, 88, 228)';
@@ -114,6 +115,49 @@ export function SpectrumBullet({ colorScheme = 'light', width = 420, height = 26
   return (
     <Chart data={bulletData} theme={colorScheme} width={width} height={height}>
       <Bullet dimension="category" metric="current" target="target" />
+    </Chart>
+  );
+}
+
+// Full interaction set on one chart: <Legend highlight isToggleable> (hover
+// dims other series, click hides one), <ChartTooltip> (per-segment content),
+// and <ChartPopover> (click opens a detail panel). Compare against
+// interactiveStackedBarSpec in interactiveSpecs.ts, which replicates all
+// three with Vega-Lite params instead of RSC's built-in behavior.
+export function SpectrumInteractiveBar({ colorScheme = 'light', width = 420, height = 260 }: SpectrumChartProps) {
+  return (
+    <Chart data={browserTrend} theme={colorScheme} width={width} height={height}>
+      <Axis position="bottom" baseline title="Month" />
+      <Axis position="left" grid title="Share (%)" />
+      <Bar type="stacked" dimension="month" metric="share" color="browser">
+        <ChartTooltip>{(datum) => <div>{String(datum.browser)}: {String(datum.share)}%</div>}</ChartTooltip>
+        <ChartPopover>
+          {(datum, close) => (
+            <div>
+              <div>
+                {String(datum.browser)} — {String(datum.month)}
+              </div>
+              <div>{String(datum.share)}% share</div>
+              <button onClick={close}>Close</button>
+            </div>
+          )}
+        </ChartPopover>
+      </Bar>
+      <Legend title="Browser" highlight isToggleable />
+    </Chart>
+  );
+}
+
+// Custom categorical palette via <Chart colors={[...]}> — mirrors passing
+// `colors` through to getSpectrumVegaLiteConfig on the Vega-Lite side
+// (getInteractiveDonutSpec + <VegaLiteChart colors={CUSTOM_DONUT_COLORS}>).
+export function SpectrumColorDonut({ colorScheme = 'light', width = 420, height = 260 }: SpectrumChartProps) {
+  return (
+    <Chart data={spend} theme={colorScheme} width={width} height={height} colors={CUSTOM_DONUT_COLORS}>
+      <Donut metric="value" color="category">
+        <ChartTooltip>{(datum) => <div>{String(datum.category)}: {String(datum.value)}</div>}</ChartTooltip>
+      </Donut>
+      <Legend title="Team" isToggleable />
     </Chart>
   );
 }

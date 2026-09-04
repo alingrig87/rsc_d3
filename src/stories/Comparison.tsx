@@ -27,6 +27,10 @@ export interface ComparisonProps {
   chartName?: string;
   /** Hide the "LLM prompt for this chart" panel (shown by default whenever `spec` is set). */
   hidePrompt?: boolean;
+  /** Custom categorical palette, forwarded to the replica's <VegaLiteChart colors={...}>. */
+  colors?: string[];
+  /** Forwarded to the replica's <VegaLiteChart onMarkClick={...}> — the host-side half of a click popover. */
+  onMarkClick?: (datum: Record<string, unknown>, event: MouseEvent) => void;
 }
 
 export function Comparison({
@@ -41,6 +45,8 @@ export function Comparison({
   note,
   chartName,
   hidePrompt = false,
+  colors,
+  onMarkClick,
 }: ComparisonProps) {
   const isDark = colorScheme === 'dark';
   const resolvedSpec = spec ? (typeof spec === 'function' ? spec(width, height) : spec) : undefined;
@@ -69,7 +75,14 @@ export function Comparison({
           {Replica ? (
             <Replica colorScheme={colorScheme} width={width} height={height} />
           ) : resolvedSpec ? (
-            <VegaLiteChart spec={resolvedSpec} colorScheme={colorScheme} width={width} height={height} />
+            <VegaLiteChart
+              spec={resolvedSpec}
+              colorScheme={colorScheme}
+              width={width}
+              height={height}
+              colors={colors}
+              onMarkClick={onMarkClick}
+            />
           ) : null}
         </Panel>
       </div>
